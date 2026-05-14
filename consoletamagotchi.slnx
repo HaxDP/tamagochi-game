@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Project Path="src/consoletamagotchi.csproj" />
+  <Folder Name="/tests/" />
+  <Project Path="tests/consoletamagotchi.tests.csproj" />
+</Solution>

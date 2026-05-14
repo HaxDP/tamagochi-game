@@ -1,0 +1,388 @@
+@startuml
+title ConsoleTamagotchi - Namespace UML Class Diagram
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+package "Global" {
+  class Program {
+    +RunApplicationLoop()
+    +CreateDependencies()
+  }
+}
+
+package "ConsoleTamagotchi.Domain.Enums" {
+  enum PetStage {
+    Egg
+    Baby
+    Teen
+    Adult
+  }
+
+  enum PetAnimationState {
+    Idle
+    Sleeping
+    Eating
+  }
+
+  enum PetSpecies {
+    Cat
+    Dog
+  }
+}
+
+package "ConsoleTamagotchi.Domain.ValueObjects" {
+  class Vector2 <<record struct>> {
+    +X : double
+    +Y : double
+    +operator +(left, right) : Vector2
+    +operator *(left, scalar) : Vector2
+  }
+}
+
+package "ConsoleTamagotchi.Domain.Models" {
+  class PetNeeds {
+    +Hunger : double
+    +Happiness : double
+    +Energy : double
+    +Hygiene : double
+    +Health : double
+    +Set(hunger, happiness, energy, hygiene, health)
+    +ChangeHunger(delta)
+    +ChangeHappiness(delta)
+    +ChangeEnergy(delta)
+    +ChangeHygiene(delta)
+    +ChangeHealth(delta)
+  }
+
+  class Pet {
+    +Name : string
+    +Species : PetSpecies
+    +Stage : PetStage
+    +AnimationState : PetAnimationState
+    +Needs : PetNeeds
+    +Position : Vector2
+    +Velocity : Vector2
+    +IsSleeping : bool
+    +IsDead : bool
+    +AgeSeconds : double
+    +StatusMessage : string
+    +CreateNew(name, species, startPosition) : Pet
+    +Restore(state : PetState) : Pet
+    +ToState() : PetState
+    +AddAge(deltaSeconds)
+    +ChangeStage(stage, message)
+    +SetSleeping(value)
+    +StartAction(state, durationSeconds, message)
+    +MarkDead()
+    +SetPosition(position)
+    +SetVelocity(velocity)
+    +SetStatusMessage(message)
+  }
+
+  class GameSettings <<record>> {
+    +GrowthRate : double
+    +StatDecayRate : double
+    +Default : GameSettings
+  }
+
+  class WorldParticle <<record struct>> {
+    +Position : Vector2
+    +TimeToLive : double
+    +Symbol : char
+  }
+
+  class GameWorldState <<record>> {
+    +Poops : List<Vector2>
+    +Particles : List<WorldParticle>
+    +NextPoopSpawnIn : double
+    +NextParticleSpawnIn : double
+  }
+
+  class PetState <<record>> {
+    +Name : string
+    +Species : PetSpecies
+    +Stage : PetStage
+    +AnimationState : PetAnimationState
+    +IsSleeping : bool
+    +IsDead : bool
+    +AgeSeconds : double
+    +Position : Vector2
+    +Velocity : Vector2
+    +Hunger : double
+    +Happiness : double
+    +Energy : double
+    +Hygiene : double
+    +Health : double
+  }
+
+  class GameWorld {
+    -_poops : List<Vector2>
+    -_particles : List<WorldParticle>
+    +Poops : IReadOnlyList<Vector2>
+    +Particles : IReadOnlyList<WorldParticle>
+    +NextPoopSpawnIn : double
+    +NextParticleSpawnIn : double
+    +Restore(state : GameWorldState) : GameWorld
+    +ToState() : GameWorldState
+    +Tick(deltaSeconds)
+    +TrySpawnPoop(random, worldWidth, worldHeight)
+    +TrySpawnHappyParticles(pet, random)
+    +ClearPoops()
+    +TryCleanPoopAt(worldX, worldY) : bool
+  }
+}
+
+package "ConsoleTamagotchi.Application.Models" {
+  class GameState <<record>> {
+    +Pet : PetState
+    +World : GameWorldState
+    +Settings : GameSettings
+    +ElapsedSeconds : double
+  }
+}
+
+package "ConsoleTamagotchi.Application.Interfaces" {
+  interface IPetInteractionService {
+    +Feed(pet, world)
+    +Play(pet, world)
+    +Clean(pet, world)
+    +Sleep(pet, world)
+    +Heal(pet, world)
+  }
+
+  interface IPetSimulationService {
+    +Update(pet, world, settings, deltaSeconds, worldWidth, worldHeight)
+  }
+
+  interface IGameStateStore {
+    +Exists() : bool
+    +Load() : GameState
+    +Save(state : GameState)
+    +Delete()
+  }
+}
+
+package "ConsoleTamagotchi.Application.Services" {
+  class PetInteractionService {
+    +Feed(pet, world)
+    +Play(pet, world)
+    +Clean(pet, world)
+    +Sleep(pet, world)
+    +Heal(pet, world)
+  }
+
+  class PetSimulationService {
+    -_random : IRandomProvider
+    -_directionChangeCooldown : double
+    +PetSimulationService(random)
+    +Update(pet, world, settings, deltaSeconds, worldWidth, worldHeight)
+  }
+}
+
+package "ConsoleTamagotchi.Infrastructure.Abstractions" {
+  interface IRandomProvider {
+    +NextDouble() : double
+    +NextDouble(min, max) : double
+  }
+
+  interface IGameClock {
+    +UtcNow : DateTimeOffset
+  }
+}
+
+package "ConsoleTamagotchi.Infrastructure.Randomness" {
+  class SystemRandomProvider {
+    -_random : Random
+    +NextDouble() : double
+    +NextDouble(min, max) : double
+  }
+}
+
+package "ConsoleTamagotchi.Infrastructure.Time" {
+  class SystemGameClock {
+    +UtcNow : DateTimeOffset
+  }
+}
+
+package "ConsoleTamagotchi.Infrastructure.Console" {
+  class TerminalCursor {
+    +Hide()
+    +Show()
+    +MoveTo(x, y)
+  }
+}
+
+package "ConsoleTamagotchi.Infrastructure.Persistence" {
+  class JsonGameStateStore {
+    -_filePath : string
+    +JsonGameStateStore(filePath)
+    +Exists() : bool
+    +Load() : GameState
+    +Save(state : GameState)
+    +Delete()
+  }
+}
+
+package "ConsoleTamagotchi.Presentation.UI" {
+  enum ActionType {
+    Feed
+    Play
+    Sleep
+    Heal
+  }
+
+  class ActionMenuCursor {
+    -_actions : ActionType[]
+    +SelectedIndex : int
+    +Actions : IReadOnlyList<ActionType>
+    +SelectedAction : ActionType
+    +MoveUp()
+    +MoveDown()
+  }
+}
+
+package "ConsoleTamagotchi.Presentation.Input" {
+  enum InputCommand {
+    None
+    MoveUp
+    MoveDown
+    QuickSleep
+    QuickHeal
+    Select
+    Feed
+    Play
+    Sleep
+    Heal
+    Quit
+  }
+
+  class ConsoleKeyboardInput {
+    +ReadAvailable() : List<InputCommand>
+  }
+
+  class ConsoleMouseInput {
+    -_inputHandle : nint
+    -_supported : bool
+    -_originalMode : uint
+    +ConsoleMouseInput()
+    +ReadLeftClicks() : IReadOnlyList<(int X, int Y)>
+    +Dispose()
+  }
+}
+
+package "ConsoleTamagotchi.Presentation.Rendering" {
+  class AsciiSprite <<record>> {
+    +Lines : string[]
+    +Width : int
+    +Height : int
+  }
+
+  class AsciiSpriteProvider {
+    +GetSprite(pet, elapsedSeconds) : AsciiSprite
+  }
+
+  class RenderModel <<record>> {
+    +Pet : Pet
+    +World : GameWorld
+    +Actions : IReadOnlyList<ActionType>
+    +SelectedActionIndex : int
+    +WorldWidth : int
+    +WorldHeight : int
+    +ElapsedSeconds : double
+  }
+
+  class ConsoleRenderer {
+    -_spriteProvider : AsciiSpriteProvider
+    +ConsoleRenderer(spriteProvider)
+    +Render(model : RenderModel)
+  }
+}
+
+package "ConsoleTamagotchi.Presentation.Game" {
+  enum GameRunResult {
+    Quit
+    Dead
+  }
+
+  class GameEngine {
+    -_pet : Pet
+    -_world : GameWorld
+    -_settings : GameSettings
+    -_simulationService : IPetSimulationService
+    -_interactionService : IPetInteractionService
+    -_stateStore : IGameStateStore
+    -_renderer : ConsoleRenderer
+    -_cursor : TerminalCursor
+    -_inputReader : ConsoleKeyboardInput
+    -_mouseInput : ConsoleMouseInput
+    -_menuCursor : ActionMenuCursor
+    -_clock : IGameClock
+    +GameEngine(...)
+    +Run() : GameRunResult
+  }
+}
+
+package "ConsoleTamagotchi.Presentation.Startup" {
+  class GameStartSpec <<record>> {
+    +Pet : Pet
+    +World : GameWorld
+    +Settings : GameSettings
+    +ElapsedSeconds : double
+  }
+
+  class StartupMenu {
+    -_stateStore : IGameStateStore
+    +StartupMenu(stateStore)
+    +Show() : GameStartSpec
+  }
+}
+
+IPetInteractionService <|.. PetInteractionService
+IPetSimulationService <|.. PetSimulationService
+IGameStateStore <|.. JsonGameStateStore
+IRandomProvider <|.. SystemRandomProvider
+IGameClock <|.. SystemGameClock
+
+Pet *-- PetNeeds
+Pet ..> PetState
+GameWorld *-- WorldParticle
+GameWorld ..> GameWorldState
+GameState --> PetState
+GameState --> GameWorldState
+GameState --> GameSettings
+RenderModel --> Pet
+RenderModel --> GameWorld
+RenderModel --> ActionType
+
+GameEngine --> Pet
+GameEngine --> GameWorld
+GameEngine --> GameSettings
+GameEngine --> ConsoleRenderer
+GameEngine --> ActionMenuCursor
+GameEngine --> ConsoleKeyboardInput
+GameEngine --> ConsoleMouseInput
+GameEngine --> TerminalCursor
+GameEngine --> IPetSimulationService
+GameEngine --> IPetInteractionService
+GameEngine --> IGameStateStore
+GameEngine --> IGameClock
+
+StartupMenu --> IGameStateStore
+StartupMenu --> GameStartSpec
+GameStartSpec --> Pet
+GameStartSpec --> GameWorld
+GameStartSpec --> GameSettings
+Program --> StartupMenu
+Program --> GameEngine
+Program --> JsonGameStateStore
+Program --> PetSimulationService
+Program --> PetInteractionService
+Program --> ConsoleRenderer
+Program --> ConsoleKeyboardInput
+Program --> ConsoleMouseInput
+Program --> TerminalCursor
+Program --> SystemRandomProvider
+Program --> SystemGameClock
+
+@enduml

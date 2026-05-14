@@ -1,0 +1,16 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE/editor
+.vs/
+.vscode/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Local saves
+savegame.json
