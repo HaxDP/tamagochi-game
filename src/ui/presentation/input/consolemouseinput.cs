@@ -46,27 +46,28 @@ public sealed class ConsoleMouseInput : IDisposable
             return [];
         }
 
-        if (!GetNumberOfConsoleInputEvents(_inputHandle, out var pending) || pending == 0)
-        {
-            return [];
-        }
-
-        var count = (int)Math.Min(pending, 64);
-        var buffer = new InputRecord[count];
-        if (!ReadConsoleInput(_inputHandle, buffer, (uint)count, out var read) || read == 0)
-        {
-            return [];
-        }
-
         var clicks = new List<(int X, int Y)>();
-        for (var i = 0; i < read; i++)
+        var peekBuffer = new InputRecord[1];
+
+        // Read only leading mouse events so keyboard events remain available for Console.ReadKey.
+        for (var i = 0; i < 64; i++)
         {
-            if (buffer[i].EventType != MouseEventType)
+            if (!PeekConsoleInput(_inputHandle, peekBuffer, 1, out var peeked) || peeked == 0)
             {
-                continue;
+                break;
             }
 
-            var mouse = buffer[i].Event.MouseEvent;
+            if (peekBuffer[0].EventType != MouseEventType)
+            {
+                break;
+            }
+
+            if (!ReadConsoleInput(_inputHandle, peekBuffer, 1, out var read) || read == 0)
+            {
+                break;
+            }
+
+            var mouse = peekBuffer[0].Event.MouseEvent;
             if (mouse.EventFlags != 0 || (mouse.ButtonState & LeftButtonPressed) == 0)
             {
                 continue;
@@ -127,6 +128,13 @@ public sealed class ConsoleMouseInput : IDisposable
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool GetNumberOfConsoleInputEvents(nint hConsoleInput, out uint lpcNumberOfEvents);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool PeekConsoleInput(
+        nint hConsoleInput,
+        [Out] InputRecord[] lpBuffer,
+        uint nLength,
+        out uint lpNumberOfEventsRead);
 
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool ReadConsoleInput(
