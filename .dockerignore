@@ -1,0 +1,15 @@
+bin/
+obj/
+**/bin/
+**/obj/
+
+.git/
+.vs/
+.vscode/
+
+*.user
+*.suo
+*.lscache
+
+savegame.json
+README.Docker.md
