@@ -49,7 +49,6 @@ public sealed class ConsoleMouseInput : IDisposable
         var clicks = new List<(int X, int Y)>();
         var peekBuffer = new InputRecord[1];
 
-        // Read only leading mouse events so keyboard events remain available for Console.ReadKey.
         for (var i = 0; i < 64; i++)
         {
             if (!PeekConsoleInput(_inputHandle, peekBuffer, 1, out var peeked) || peeked == 0)

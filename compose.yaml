@@ -1,0 +1,9 @@
+services:
+  tamagotchi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tamagotchi-game:latest
+    container_name: tamagotchi-game
+    stdin_open: true
+    tty: tru
